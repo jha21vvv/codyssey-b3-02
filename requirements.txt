@@ -1,0 +1,3 @@
+# Python 3.10+ 표준 라이브러리(urllib, json, argparse, subprocess, re)만으로 기본 동작 가능합니다.
+# 아래 패키지는 개발 및 확장 편의를 위한 선택적 의존성입니다.
+pytest>=7.0.0
