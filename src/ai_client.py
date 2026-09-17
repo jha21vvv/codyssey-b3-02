@@ -30,6 +30,23 @@ class QuotaExceededError(APIError):
     pass
 
 
+def load_dotenv_file(env_path: str = ".env") -> None:
+    """루트 경로의 .env 파일이 존재하는 경우 환경변수로 자동 로드합니다."""
+    if os.path.isfile(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+
 class AIClient:
     """
     OpenAI 호환 REST API 클라이언트
@@ -43,7 +60,11 @@ class AIClient:
         base_url: Optional[str] = None,
         timeout: float = 45.0
     ):
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        if api_key is None:
+            load_dotenv_file()
+            self.api_key = os.environ.get("OPENAI_API_KEY")
+        else:
+            self.api_key = api_key
         self.base_url = (
             base_url
             or os.environ.get("OPENAI_BASE_URL")

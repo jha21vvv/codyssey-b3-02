@@ -55,42 +55,43 @@ def build_parser() -> argparse.ArgumentParser:
 def _add_common_options(parser: argparse.ArgumentParser, default_max_tokens: int) -> None:
     """서브커맨드 공통 옵션을 추가합니다."""
     parser.add_argument(
-        "-m", "--model",
+        "-m", "--model", "-model",
         type=str,
         default="gpt-4o-mini",
         help="사용할 AI 모델명 (기본값: gpt-4o-mini)"
     )
     parser.add_argument(
-        "-t", "--temperature",
+        "-t", "--temperature", "-temperature",
         type=float,
         default=0.2,
         help="텍스트 생성 다양성 파라미터 (기본값: 0.2)"
     )
     parser.add_argument(
-        "--max-tokens",
+        "--max-tokens", "-max-tokens",
         type=int,
         default=default_max_tokens,
         help=f"생성할 최대 토큰 수 (기본값: {default_max_tokens})"
     )
     parser.add_argument(
-        "--staged",
+        "--staged", "-staged",
         action="store_true",
         default=False,
         help="스테이징된(staged) 변경 사항만 수집합니다."
     )
     parser.add_argument(
-        "--safe-mode",
+        "--safe-mode", "-safe-mode",
         dest="safe_mode",
         action="store_true",
         default=True,
         help="민감정보 마스킹 및 diff 길이 제한 활성화 (기본값: True)"
     )
     parser.add_argument(
-        "--no-safe-mode",
+        "--no-safe-mode", "-no-safe-mode",
         dest="safe_mode",
         action="store_false",
         help="안전 모드 비활성화"
     )
+
 
 
 def run_commit_pipeline(args: argparse.Namespace, client: Optional[AIClient] = None) -> int:
