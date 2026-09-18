@@ -16,6 +16,12 @@
   * 규격(길이 제한, 템플릿 헤더, 불릿 요약) 미달 시 LLM 재생성이 아닌 로컬 후처리기(`Validator`)로 완벽하게 보정합니다.
 * **안전한 Git 연동**: `git status`와 `git diff` 수집 및 텍스트 초안 출력까지만 수행하며, `git commit`, `git push`, 원격 PR 생성 등 위험한 자동 반영은 일체 실행하지 않습니다.
 
+### 1.1. 시스템 아키텍처 조감도
+
+![시스템 아키텍처 다이어그램](docs/diagrams/architecture_overview.png)
+
+> 💡 각 모듈의 단계별 파이프라인 및 데이터 변환 과정의 상세 분석은 [docs/PROCESS_ARCHITECTURE.md](docs/PROCESS_ARCHITECTURE.md)를 참고하세요.
+
 ---
 
 ## 2. 개발 및 실행 환경
@@ -64,6 +70,8 @@ export OPENAI_API_KEY="sk-your-openai-api-key-here"
 ### 4.1. 커밋 메시지 자동 생성 (`commit`)
 현재 작업 트리의 변경 사항을 요약하여 1줄 제목(50~72자)과 본문 불릿을 포함한 커밋 메시지를 생성합니다.
 
+![커밋 메시지 생성 파이프라인](docs/diagrams/process_flow_commit.png)
+
 ```powershell
 # 기본 실행 (staged + unstaged 변경사항 분석, 안전모드 적용)
 python -m src.cli commit
@@ -77,6 +85,8 @@ python -m src.cli commit -m gpt-4o-mini -t 0.2 --max-tokens 300
 
 ### 4.2. Pull Request 초안 자동 생성 (`pr`)
 80자 이내의 PR 제목과 `Why`, `What`, `How to Test` 3대 필수 섹션 헤더 및 각 섹션별 불릿 항목을 포함한 PR 본문을 생성합니다.
+
+![Pull Request 초안 생성 파이프라인](docs/diagrams/process_flow_pr.png)
 
 ```powershell
 # 기본 실행
@@ -158,6 +168,8 @@ feat: add automated git commit and PR generator CLI
 ---
 
 ## 6. 운영 및 보안 가이드
+
+![보안 안전 모드 및 AI 통신 흐름도](docs/diagrams/process_flow_security_and_ai.png)
 
 ### 6.1. 민감정보 보호 및 안전 모드 (`--safe-mode`)
 * **마스킹 패턴**: OpenAI 키(`sk-...`), Anthropic 키(`sk-ant-...`), GitHub PAT(`ghp_...`), AWS 키(`AKIA...`), 이메일 주소(`user@domain.com`), 패스워드 할당문(`password = "..."`) 등을 자동으로 감지하여 치환합니다.
@@ -383,8 +395,10 @@ cd ..; Remove-Item -Recurse -Force test_clean_repo
 ---
 
 ### [추가 참고 문서]
+* 전체 프로세스 및 상세 아키텍처 설계서: [docs/PROCESS_ARCHITECTURE.md](docs/PROCESS_ARCHITECTURE.md)
 * 전체 45개 단위 테스트 및 7대 수동 시나리오의 심층 분석 보고서: [TEST_RESULTS.md](TEST_RESULTS.md)
 * 단계별 테스트 계획 및 명령어 상세 가이드: [TEST_PLAN.md](TEST_PLAN.md)
 * 문제풀이 설계 및 모듈별 구현 계획서: [PLAN.md](PLAN.md)
+
 
 
