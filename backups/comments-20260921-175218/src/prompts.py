@@ -1,5 +1,5 @@
-                                                     
-                                                                                      
+# [1차]: 프롬프트 엔지니어링 모듈의 역할을 설명하는 다중 라인 모듈 독스트링의 시작입니다.
+# [2차]: "이 파일은 AI에게 '어떻게 답변해야 하는지' 시험 문제지와 모범 답안 가이드라인을 만들어주는 출제 위원실입니다"라고 안내하는 팻말입니다.
 """
 # [1차]: 커밋 메시지 및 Pull Request 초안 생성을 위한 프롬프트 엔지니어링 모듈임을 명시합니다.
 # [2차]: AI에게 아무 말 대잔치를 시키지 않고, 회사의 똑똑한 시니어 개발자처럼 똑부러지게 글을 쓰게 조련하는 곳입니다.
@@ -8,12 +8,12 @@
 # [2차]: 안내 팻말을 닫습니다.
 """
 
-                                                                              
-                                                                                                            
+# [1차]: OpenAI Chat Completion 규격 타입 표기를 위해 typing 표준 모듈에서 Dict와 List를 임포트합니다.
+# [2차]: "AI와 대화할 때는 [{'role': 'system', 'content': '...'}, ... ] 모양의 사전 목록을 만들어야 해"라고 파이썬에게 자료형틀을 알려주는 자입니다.
 from typing import Dict, List
 
-                                                                    
-                                                                           
+# [1차]: AI에게 시니어 엔지니어 역할을 부여하고 커밋 메시지 실무 표준 규칙을 강제하는 시스템 프롬프트 상수입니다.
+# [2차]: AI에게 배역(연기할 캐릭터)과 절대 어기면 안 되는 사내 사규(룰북)를 쥐어주는 '커밋 메시지 전용 연출 대본'입니다.
 COMMIT_SYSTEM_PROMPT = """당신은 실무 표준을 철저히 준수하는 전문 소프트웨어 엔지니어입니다.
 제공된 Git diff와 변경된 파일 목록을 분석하여 명확하고 실용적인 Git 커밋 메시지를 작성하세요.
 
@@ -28,8 +28,8 @@ COMMIT_SYSTEM_PROMPT = """당신은 실무 표준을 철저히 준수하는 전�
 4. 결과물 전체를 마크다운 코드 블록(```)으로 감싸지 말고, 순수한 커밋 메시지 텍스트만 출력하세요.
 """
 
-                                                                                 
-                                                                                             
+# [1차]: GitHub PR 초안 생성을 위해 Why, What, How to Test 3대 필수 섹션을 강제하는 시스템 프롬프트 상수입니다.
+# [2차]: 팀원들에게 "제가 왜 이 코드를 고쳤고, 무엇을 고쳤으며, 어떻게 테스트해보시면 되는지"를 친절히 설명하게 만드는 'PR 전용 사내 표준 양식지'입니다.
 PR_SYSTEM_PROMPT = """당신은 협업과 코드 리뷰를 위한 완성도 높은 Pull Request(PR) 설명을 작성하는 전문 소프트웨어 엔지니어입니다.
 제공된 Git diff와 변경된 파일 목록을 분석하여 PR 제목과 구조화된 본문을 작성하세요.
 
@@ -50,28 +50,28 @@ PR_SYSTEM_PROMPT = """당신은 협업과 코드 리뷰를 위한 완성도 높�
 """
 
 
-                                                                 
-                                                                               
+# [1차]: 파일명 리스트를 사람이 읽기 좋은 글머리 기호(불릿) 형태의 문자열로 변환하는 헬퍼 함수 선언부입니다.
+# [2차]: 파일 이름들이 담긴 배열을 AI가 읽기 편하게 글머리 기호("- 파일1\n- 파일2")로 예쁘게 인쇄해 주는 서식 변환기입니다.
 def format_changed_files_summary(changed_files: List[str]) -> str:
-                                    
-                      
+    # [1차]: 함수의 목적을 명시한 한 줄 독스트링입니다.
+    # [2차]: 함수 설명서입니다.
     """변경된 파일 목록을 프롬프트용 텍스트로 변환합니다."""
-                                          
-                                    
+    # [1차]: 변경된 파일 목록이 비어있는지(빈 리스트) 검사합니다.
+    # [2차]: 고친 파일이 정말 하나도 없는지 확인합니다.
     if not changed_files:
-                                            
-                                                           
+        # [1차]: 빈 목록일 경우 명시적인 대체 문자열을 반환합니다.
+        # [2차]: AI가 헷갈리지 않게 "변경된 파일이 없습니다"라고 친절하게 써서 돌려줍니다.
         return "- (변경된 파일 없음)"
-                                                                  
-                                                                
+    # [1차]: 리스트의 각 파일명(f) 앞에 "- "를 붙여 개행 문자("\n")로 결합한 문자열을 반환합니다.
+    # [2차]: 각 파일 이름 앞에 예쁜 동그라미 불릿("- ")을 달아서 세로로 줄 세운 문자열을 만듭니다.
     return "\n".join(f"- {f}" for f in changed_files)
 
 
-                                                                    
-                                               
+# [1차]: 커밋 메시지 생성을 위한 OpenAI Chat Completion 메시지 구조를 조립하는 함수 선언부입니다.
+# [2차]: AI에게 보낼 "커밋 메시지 주문서" 봉투를 완성하는 조립 공장입니다.
 def build_commit_prompt(changed_files: List[str], diff_text: str) -> List[Dict[str, str]]:
-                                    
-                   
+    # [1차]: 함수의 목적을 명시한 독스트링의 시작입니다.
+    # [2차]: 설명서 시작.
     """
     # [1차]: OpenAI Chat Completion 메시지 목록을 생성함을 설명합니다.
     # [2차]: 질문지를 조립한다는 설명입니다.
@@ -79,30 +79,30 @@ def build_commit_prompt(changed_files: List[str], diff_text: str) -> List[Dict[s
     # [1차]: 독스트링을 닫습니다.
     # [2차]: 설명서 끝.
     """
-                                                                    
-                                    
+    # [1차]: format_changed_files_summary를 호출하여 파일 목록을 불릿 텍스트로 가공합니다.
+    # [2차]: 파일 이름들을 보기 좋게 목록표로 만듭니다.
     files_summary = format_changed_files_summary(changed_files)
-                                                                                 
-                                                                                              
+    # [1차]: 파일 목록과 코드 diff 내용을 결합하여 사용자 프롬프트 텍스트(user_content)를 f-string으로 조립합니다.
+    # [2차]: "AI야, [고친 파일들]은 이거고, [구체적인 코드 diff]는 이거니까, 위 규칙대로 멋진 커밋 메시지 써줘!"라고 적힌 질문 편지를 만듭니다.
     user_content = (
         f"[변경된 파일 목록]\n{files_summary}\n\n"
         f"[Git Diff 변경 내용]\n{diff_text}\n\n"
         "위 변경 사항을 바탕으로 작성 규칙에 맞추어 1줄 제목과 본문 요약을 포함한 커밋 메시지를 작성해주세요."
     )
 
-                                                                       
-                                                                                                        
+    # [1차]: system 룰북과 user 질문 본문을 각각의 role 딕셔너리로 묶은 2단계 대화 리스트를 반환합니다.
+    # [2차]: 1번 편지 봉투(system: 넌 시니어 개발자고 이 룰을 지켜)와 2번 편지 봉투(user: 여기 diff 있으니 커밋 써줘)를 묶어서 택배 상자에 담아 보냅니다.
     return [
         {"role": "system", "content": COMMIT_SYSTEM_PROMPT.strip()},
         {"role": "user", "content": user_content.strip()}
     ]
 
 
-                                                                           
-                                              
+# [1차]: PR 제목 및 본문 초안 생성을 위한 OpenAI Chat Completion 메시지 구조를 조립하는 함수 선언부입니다.
+# [2차]: AI에게 보낼 "PR 초안 작성 주문서"를 완성하는 조립 공장입니다.
 def build_pr_prompt(changed_files: List[str], diff_text: str) -> List[Dict[str, str]]:
-                                    
-                   
+    # [1차]: 함수의 목적을 명시한 독스트링의 시작입니다.
+    # [2차]: 설명서 시작.
     """
     # [1차]: PR 초안 작성을 위한 메시지 목록을 생성함을 기술합니다.
     # [2차]: 설명입니다.
@@ -110,19 +110,19 @@ def build_pr_prompt(changed_files: List[str], diff_text: str) -> List[Dict[str, 
     # [1차]: 독스트링을 닫습니다.
     # [2차]: 설명서 끝.
     """
-                                    
-                               
+    # [1차]: 변경 파일 목록을 불릿 문자열로 변환합니다.
+    # [2차]: 고친 파일들을 깔끔하게 정리합니다.
     files_summary = format_changed_files_summary(changed_files)
-                                                                            
-                                                                                                
+    # [1차]: 80자 이내 제목과 Why/What/How to Test 헤더 작성을 명시적으로 요구하는 질문 텍스트를 조립합니다.
+    # [2차]: "AI야, 이번엔 커밋이 아니라 Pull Request 글이야. Why/What/How to Test 꼭 나눠서 적어줘!"라고 요청 문장을 완성합니다.
     user_content = (
         f"[변경된 파일 목록]\n{files_summary}\n\n"
         f"[Git Diff 변경 내용]\n{diff_text}\n\n"
         "위 변경 사항을 바탕으로 작성 규칙에 맞추어 80자 이내의 1줄 PR 제목과 Why/What/How to Test 헤더 및 불릿을 포함한 PR 본문을 작성해주세요."
     )
 
-                                                         
-                                         
+    # [1차]: PR 전용 system 룰북과 user 요청 문장을 딕셔너리 리스트로 반환합니다.
+    # [2차]: PR 작성 지침서와 데이터 봉투를 합쳐서 반환합니다.
     return [
         {"role": "system", "content": PR_SYSTEM_PROMPT.strip()},
         {"role": "user", "content": user_content.strip()}
