@@ -79,8 +79,9 @@ python -m src.cli commit
 # 스테이징된(git add) 변경사항만 대상으로 지정
 python -m src.cli commit --staged
 
-# AI 모델 및 파라미터 직접 지정
-python -m src.cli commit -m gpt-4o-mini -t 0.2 --max-tokens 300
+# 특정 외부 Git 저장소의 변경사항을 대상으로 실행 (-r, --repo, -C)
+python -m src.cli commit --repo D:/projects/another-repo
+python -m src.cli pr -C ../my-other-service
 ```
 
 ### 4.2. Pull Request 초안 자동 생성 (`pr`)
@@ -97,12 +98,16 @@ python -m src.cli pr --staged
 
 # 더 풍부한 설명을 위해 max-tokens 확장
 python -m src.cli pr --max-tokens 1500
+
+# 특정 외부 저장소 대상 PR 초안 생성
+python -m src.cli pr --repo /path/to/project
 ```
 
 ### 4.3. CLI 옵션 상세 안내
 
 | 옵션 | 단축 옵션 | 기본값 | 설명 |
 |---|---|---|---|
+| `--repo` | `-r`, `-C` | `None` (현재 디렉토리) | 분석할 대상 Git 저장소 디렉토리 경로 (어디서든 외부 저장소 지정 가능) |
 | `--model` | `-m` | `gpt-4o-mini` | 사용할 AI 모델 이름 (예: `gpt-4o`, `gpt-4o-mini` 등) |
 | `--temperature` | `-t` | `0.2` | 생성 다양성 제어 (0.0에 가까울수록 일관되고 정형화된 출력) |
 | `--max-tokens` | - | `commit`: 300<br>`pr`: 1000 | 생성할 최대 토큰 수 |
@@ -130,6 +135,7 @@ feat(core): implement git collection and safe mode filter
   * 소요 시간        : 1.18초
   * 사용 모델        : gpt-4o-mini (temp=0.2, max_tokens=300)
   * 보안 안전 모드   : 적용됨 (ON)
+  * 대상 저장소      : C:\Users\user\Documents\project
 ====================================================================
   [안내] 위 결과물은 AI가 생성한 초안입니다. 반드시 검토 후 적용하세요.
 ====================================================================
@@ -395,7 +401,125 @@ cd ..; Remove-Item -Recurse -Force test_clean_repo
 ---
 
 ### [추가 참고 문서]
-* 전체 프로세스 및 상세 아키텍처 설계서: [docs/PROCESS_ARCHITECTURE.md](docs/PROCESS_ARCHITECTURE.md)
+* 전체 프로세스 및 상세 아키텍처 설계서: [docs/PROCESS_ARCHITECTURE.md](docs/PROCESS_ARCHITECTURE.md)Ran command: `python -c "
+import sys, io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+with open(r'..\codyssey-b2-02\src\game.py', 'r', encoding='utf-8') as f:
+    text = f.read()
+
+import re
+m = re.search(r'def parse_args.*?return parser\.parse_args\(\)', text, re.DOTALL)
+if m:
+    print(m.group(0))
+else:
+    print('parse_args not found, looking for main')
+    idx = text.find('if __name__ == \"__main__\":')
+    if idx != -1:
+        print(text[idx:idx+800])
+"`
+Used tool: manage_task
+Ran command: `python -c "
+import sys, io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+with open(r'..\codyssey-b2-02\src\game.py', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+print(''.join(lines[-40:]))
+"`
+Ran command: `Test-Path ..\codyssey-b2-02\game.py; Test-Path ..\codyssey-b2-02\src\game.py`
+Ran command: `python -c "
+import subprocess, sys
+res = subprocess.run([sys.executable, 'src/game.py'], cwd=r'..\codyssey-b2-02', capture_output=True, text=True, encoding='utf-8')
+print(res.stdout[:500])
+print('returncode:', res.returncode)
+"`
+Ran command: `python -c "
+content = '''\"\"\"
+한국 음식 128선 식사 추천 이상형 월드컵 메인 실행기 (Root Runner)
+\"\"\"
+from src.game import main
+
+if __name__ == \"__main__\":
+    main()
+'''
+with open(r'..\codyssey-b2-02\game.py', 'w', encoding='utf-8') as f:
+    f.write(content)
+print('Created root game.py')
+"`
+Ran command: `python -c "open(r'..\codyssey-b2-02\game.py', 'w', encoding='utf-8').write('from src.game import main\n\nif __name__ == \"__main__\":\n    main()\n')"`
+Ran command: `Set-Content -Path "..\codyssey-b2-02\game.py" -Value "from src.game import main`n`nif __name__ == '__main__':`n    main()"`
+Ran command: `python -c "
+import subprocess, sys
+res = subprocess.run([sys.executable, 'game.py', '--help'], cwd=r'..\codyssey-b2-02', capture_output=True, text=True, encoding='utf-8')
+print(res.stdout)
+"`
+Ran command: `git -C "..\codyssey-b2-02" add game.py; git -C "..\codyssey-b2-02" commit -m "feat: Add root game.py runner shortcut"; git -C "..\codyssey-b2-02" push origin main`
+Used tool: manage_task
+
+**한국 음식 128선 이상형 월드컵 게임**을 터미널에서 실행하는 방법입니다!
+
+터미널의 현재 위치가 `codyssey-b2-02` 폴더인지 확인하신 후, 아래 명령어 중 원하시는 모드로 실행해 보세요.
+
+---
+
+### 🎮 1. 직접 골라가며 플레이하기 (대화형 모드 - 추천!)
+
+화면에 나오는 두 음식 중 마음에 드는 음식 번호(`1` 또는 `2`)를 키보드로 직접 누르며 최종 우승 음식을 뽑는 모드입니다.
+
+#### ① 기본 8강 혼자서 플레이 (1인용)
+```bash
+python game.py --interactive --players 안재현
+```
+
+#### ② 16강으로 풍성하게 플레이
+```bash
+python game.py --interactive --round 16 --players 안재현
+```
+
+#### ③ 팀원 3명(안재현, 강동하, 김진우)이 돌아가며 투표하기 (다인원 턴제)
+```bash
+python game.py --interactive --players 안재현 강동하 김진우
+```
+*(동점이 나오면 비자명 충돌 실습 때 만든 `tie_breaker.py`가 자동으로 제비뽑기를 진행합니다!)*
+
+---
+
+### ⚡ 2. 1초 만에 결과 보기 (자동 시뮬레이션 모드)
+
+키보드 입력 없이 팀원 3명이 자동으로 투표하고 동점 추첨까지 거쳐 우승 음식을 바로 출력합니다.
+
+```bash
+python game.py
+```
+
+---
+
+### 💡 실행 화면 예시
+
+```text
+=================================================================
+    [한국 음식 128선 식사 추천 이상형 월드컵]
+=================================================================
+* 토너먼트 규모: 8강
+* 참여 플레이어: 안재현 (총 1명)
+-----------------------------------------------------------------
+
+===== [ 8강전 ] =====
+[매치 1]
+  [1] 순두부찌개: 부드러운 순두부와 얼큰한 해물 국물
+  [2] 부대찌개: 햄과 소시지, 라면 사리가 가득한 푸짐함
+[안재현] 님의 선택 (1 또는 2 입력): 1
+-> 승자: 순두부찌개 (다수결 투표)
+...
+=================================================================
+        *** 오늘의 최종 우승 추천 음식! ***
+=================================================================
+  * 이름: 순두부찌개
+  * 카테고리: 찌개/탕류
+  * 설명: 부드러운 순두부와 얼큰한 해물 국물
+=================================================================
+```
+
+터미널에 `python game.py --interactive --players 안재현`을 복사해서 붙여넣고 엔터를 쳐보세요! 점심/저녁 메뉴 추천으로 아주 재미있게 즐기실 수 있습니다. 😊
 * 전체 45개 단위 테스트 및 7대 수동 시나리오의 심층 분석 보고서: [TEST_RESULTS.md](TEST_RESULTS.md)
 * 단계별 테스트 계획 및 명령어 상세 가이드: [TEST_PLAN.md](TEST_PLAN.md)
 * 문제풀이 설계 및 모듈별 구현 계획서: [PLAN.md](PLAN.md)

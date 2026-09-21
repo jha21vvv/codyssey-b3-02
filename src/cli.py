@@ -11,6 +11,9 @@ AI 기반 Git 커밋 및 PR 자동 생성기 CLI 인터페이스
 # [1차]: 터미널 명령어 및 옵션 플래그 파싱을 위해 argparse 표준 라이브러리를 임포트합니다.
 # [2차]: 사용자가 터미널에 친 복잡한 옵션들(--model, --safe-mode 등)을 파이썬이 알아먹기 좋게 숟가락으로 떠먹여 주는 번역기입니다.
 import argparse
+# [1차]: 경로 검증 및 파일 시스템 확인을 위해 os 표준 라이브러리를 임포트합니다.
+# [2차]: 폴더가 실제로 있는지, 파일이 존재하는지 컴퓨터 지도를 확인하는 내비게이션 도구입니다.
+import os
 # [1차]: 표준 입출력 스트림(stdout, stderr) 제어 및 종료 코드(sys.exit) 반환을 위해 sys 모듈을 임포트합니다.
 # [2차]: 컴퓨터 화면에 글자를 띄우거나 프로그램을 정상/비정상 종료시키는 운영체제 소통 창구입니다.
 import sys
@@ -156,6 +159,15 @@ def _add_common_options(parser: argparse.ArgumentParser, default_max_tokens: int
         action="store_false",
         help="안전 모드 비활성화"
     )
+    # [1차]: 대상 Git 저장소 경로를 지정하는 -r, --repo, -C 옵션을 등록합니다 (기본값: None, 현재 디렉토리).
+    # [2차]: "어느 프로젝트 폴더의 변경점을 읽어올까?" 원격 조준 스위치를 달아줍니다.
+    parser.add_argument(
+        "-r", "--repo", "-C",
+        dest="repo",
+        type=str,
+        default=None,
+        help="분석할 대상 Git 저장소 디렉토리 경로 (기본값: 현재 디렉토리)"
+    )
 
 
 # [1차]: 커밋 메시지 자동 생성 파이프라인 전체를 1~7단계로 순차 지휘하는 함수 선언부입니다.
@@ -164,22 +176,35 @@ def run_commit_pipeline(args: argparse.Namespace, client: Optional[AIClient] = N
     # [1차]: 함수의 목적을 명시한 한 줄 독스트링입니다.
     # [2차]: 설명서입니다.
     """커밋 메시지 자동 생성 파이프라인을 실행합니다."""
-    # [1차]: 1단계: 현재 폴더가 유효한 Git 저장소인지 검증합니다.
+    # [1차]: 대상 Git 저장소 경로를 확인하고 정규화합니다.
+    # [2차]: 사용자가 옵션으로 지정한 폴더가 있는지 확인하고 절대 경로로 바꿉니다.
+    target_repo = os.path.abspath(args.repo) if getattr(args, "repo", None) else None
+
+    # [1차]: 대상 디렉토리가 실제로 존재하는지 유효성을 검사합니다.
+    # [2차]: 손님이 지정한 폴더가 컴퓨터에 진짜 있는지 확인합니다.
+    if target_repo and not os.path.isdir(target_repo):
+        print(f"[오류] 지정한 저장소 경로가 존재하지 않거나 디렉토리가 아닙니다: {args.repo}", file=sys.stderr)
+        return 1
+
+    # [1차]: 1단계: 대상 폴더가 유효한 Git 저장소인지 검증합니다.
     # [2차]: 1단계 문지기 일꾼: "여기가 Git 작업실 맞나요?" 확인합니다.
-    if not is_git_repository():
+    if not is_git_repository(cwd=target_repo):
         # [1차]: Git 저장소가 아닌 경우 표준 에러(sys.stderr)로 에러 메시지를 출력합니다.
         # [2차]: Git 폴더가 아니면 빨간색 경고등을 켜고 안내문을 출력합니다.
-        print("[오류] 현재 디렉토리가 Git 저장소가 아닙니다. Git 초기화된 리포지토리에서 실행해주세요.", file=sys.stderr)
+        if target_repo:
+            print(f"[오류] 지정한 디렉토리가 Git 저장소가 아닙니다: {target_repo}", file=sys.stderr)
+        else:
+            print("[오류] 현재 디렉토리가 Git 저장소가 아닙니다. Git 초기화된 리포지토리에서 실행해주세요.", file=sys.stderr)
         # [1차]: 비정상 종료 코드 1을 반환합니다.
         # [2차]: 컴퓨터에게 "에러로 끝났음(1)"을 알리고 멈춥니다.
         return 1
 
     # [1차]: 2단계: 변경된 파일 목록을 수집합니다.
     # [2차]: 2단계 수집 일꾼: 오늘 수정한 파일 목록을 받아옵니다.
-    changed_files = get_changed_files()
+    changed_files = get_changed_files(cwd=target_repo)
     # [1차]: args.staged 설정에 맞추어 코드 변경 diff 문자열을 수집합니다.
     # [2차]: 구체적으로 몇 번째 줄이 바뀌었는지 코드 영수증을 긁어옵니다.
-    raw_diff = get_git_diff(staged_only=args.staged)
+    raw_diff = get_git_diff(staged_only=args.staged, cwd=target_repo)
 
     # [1차]: 변경된 파일도 없고 diff 내용도 공백인 경우를 검사합니다.
     # [2차]: 고친 게 하나도 없는데 실수로 프로그램을 켰는지 확인합니다.
@@ -245,7 +270,8 @@ def run_commit_pipeline(args: argparse.Namespace, client: Optional[AIClient] = N
         "model": args.model,
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
-        "safe_mode": args.safe_mode
+        "safe_mode": args.safe_mode,
+        "repo": target_repo or os.getcwd()
     }
     # [1차]: format_output을 호출하여 터미널용 액자 박스 문자열을 생성합니다.
     # [2차]: 예쁜 테두리 액자에 결과물과 영수증을 담아 포장합니다.
@@ -264,18 +290,31 @@ def run_pr_pipeline(args: argparse.Namespace, client: Optional[AIClient] = None)
     # [1차]: 함수의 목적을 명시한 한 줄 독스트링입니다.
     # [2차]: 설명서입니다.
     """Pull Request 초안 자동 생성 파이프라인을 실행합니다."""
-    # [1차]: 1단계: 현재 폴더의 Git 저장소 유효성을 검사합니다.
+    # [1차]: 대상 Git 저장소 경로를 확인하고 정규화합니다.
+    # [2차]: 사용자가 옵션으로 지정한 폴더가 있는지 확인하고 절대 경로로 바꿉니다.
+    target_repo = os.path.abspath(args.repo) if getattr(args, "repo", None) else None
+
+    # [1차]: 대상 디렉토리가 실제로 존재하는지 유효성을 검사합니다.
+    # [2차]: 손님이 지정한 폴더가 컴퓨터에 진짜 있는지 확인합니다.
+    if target_repo and not os.path.isdir(target_repo):
+        print(f"[오류] 지정한 저장소 경로가 존재하지 않거나 디렉토리가 아닙니다: {args.repo}", file=sys.stderr)
+        return 1
+
+    # [1차]: 1단계: 현재 폴더 또는 지정된 대상의 Git 저장소 유효성을 검사합니다.
     # [2차]: 1단계: Git 폴더인지 확인합니다.
-    if not is_git_repository():
+    if not is_git_repository(cwd=target_repo):
         # [1차]: 비저장소일 경우 표준 에러 출력 후 종료합니다.
         # [2차]: 에러 경고문을 띄우고 중단합니다.
-        print("[오류] 현재 디렉토리가 Git 저장소가 아닙니다. Git 초기화된 리포지토리에서 실행해주세요.", file=sys.stderr)
+        if target_repo:
+            print(f"[오류] 지정한 디렉토리가 Git 저장소가 아닙니다: {target_repo}", file=sys.stderr)
+        else:
+            print("[오류] 현재 디렉토리가 Git 저장소가 아닙니다. Git 초기화된 리포지토리에서 실행해주세요.", file=sys.stderr)
         return 1
 
     # [1차]: 2단계: 변경 파일 목록과 코드 diff를 수집합니다.
     # [2차]: 2단계: 고친 파일과 코드 영수증을 모아옵니다.
-    changed_files = get_changed_files()
-    raw_diff = get_git_diff(staged_only=args.staged)
+    changed_files = get_changed_files(cwd=target_repo)
+    raw_diff = get_git_diff(staged_only=args.staged, cwd=target_repo)
 
     # [1차]: 변경 사항이 전무한 경우를 검사합니다.
     # [2차]: 고친 게 없는지 확인합니다.
@@ -335,7 +374,8 @@ def run_pr_pipeline(args: argparse.Namespace, client: Optional[AIClient] = None)
         "model": args.model,
         "temperature": args.temperature,
         "max_tokens": args.max_tokens,
-        "safe_mode": args.safe_mode
+        "safe_mode": args.safe_mode,
+        "repo": target_repo or os.getcwd()
     }
     # [1차]: format_output으로 완성된 액자형 출력 문자열을 생성합니다.
     # [2차]: 예쁜 상자에 PR 초안과 영수증을 담습니다.

@@ -134,6 +134,55 @@ class TestCLI(unittest.TestCase):
         self.assertIn("### How to Test", output)
         self.assertIn("AI API 호출 횟수 : 1회", output)
 
+    def test_argument_parsing_repo_options(self):
+        # --repo
+        args1 = self.parser.parse_args(["commit", "--repo", "C:/test/repo"])
+        self.assertEqual(args1.repo, "C:/test/repo")
+
+        # -r
+        args2 = self.parser.parse_args(["commit", "-r", "/custom/path"])
+        self.assertEqual(args2.repo, "/custom/path")
+
+        # -C
+        args3 = self.parser.parse_args(["pr", "-C", "../other-project"])
+        self.assertEqual(args3.repo, "../other-project")
+
+    @patch("os.path.isdir", return_value=False)
+    @patch("sys.stderr", new_callable=io.StringIO)
+    def test_run_commit_pipeline_invalid_repo_directory(self, mock_stderr, mock_isdir):
+        args = self.parser.parse_args(["commit", "--repo", "non_existent_folder_xyz"])
+        exit_code = run_commit_pipeline(args)
+        self.assertEqual(exit_code, 1)
+        self.assertIn("지정한 저장소 경로가 존재하지 않거나 디렉토리가 아닙니다", mock_stderr.getvalue())
+
+    @patch("os.path.isdir", return_value=True)
+    @patch("src.cli.is_git_repository", return_value=False)
+    @patch("sys.stderr", new_callable=io.StringIO)
+    def test_run_commit_pipeline_repo_not_git(self, mock_stderr, mock_is_git, mock_isdir):
+        args = self.parser.parse_args(["commit", "--repo", "some_regular_dir"])
+        exit_code = run_commit_pipeline(args)
+        self.assertEqual(exit_code, 1)
+        self.assertIn("지정한 디렉토리가 Git 저장소가 아닙니다", mock_stderr.getvalue())
+
+    @patch("os.path.isdir", return_value=True)
+    @patch("src.cli.is_git_repository", return_value=True)
+    @patch("src.cli.get_changed_files", return_value=["src/sample.py"])
+    @patch("src.cli.get_git_diff", return_value="+ print('hello')")
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_run_commit_pipeline_custom_repo_success(self, mock_stdout, mock_diff, mock_files, mock_is_git, mock_isdir):
+        args = self.parser.parse_args(["commit", "--repo", "C:/valid/repo"])
+        mock_client = MagicMock()
+        mock_client.generate_completion.return_value = (
+            "feat: external repo commit\n\n- updated sample.py", 0.8
+        )
+        mock_client.call_count = 1
+
+        exit_code = run_commit_pipeline(args, client=mock_client)
+        self.assertEqual(exit_code, 0)
+        output = mock_stdout.getvalue()
+        self.assertIn("feat: external repo commit", output)
+        self.assertIn("대상 저장소", output)
+
 
 if __name__ == "__main__":
     unittest.main()
