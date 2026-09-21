@@ -79,6 +79,8 @@ python -m src.cli commit
 # 스테이징된(git add) 변경사항만 대상으로 지정
 python -m src.cli commit --staged
 
+python -m src.cli commit --temperature 0.7 --max-tokens 500
+
 # 특정 외부 Git 저장소의 변경사항을 대상으로 실행 (-r, --repo, -C)
 python -m src.cli commit --repo D:/projects/another-repo
 python -m src.cli pr -C ../my-other-service
@@ -398,131 +400,34 @@ cd ..; Remove-Item -Recurse -Force test_clean_repo
   * 동료 개발자가 코드 리뷰를 할 때 가장 알고 싶은 3가지가 **"왜 바꿨는지(Why)", "무엇을 바꿨는지(What)", "어떻게 테스트해보면 되는지(How to Test)"**입니다.
   * 이 3가지 섹션과 구체적인 불릿 항목이 반드시 채워져 있어야 리뷰어가 믿고 안전하게 코드를 승인(Merge)할 수 있기 때문입니다.
 
----
+# Git 변경 사항 수집 결과가 AI API 호출 로직을 왜 통과했는지 설명할 수 있는가?
+- 빈 변경 사항 방어: git diff 실행 결과가 빈 문자열이거나 공백만 있는 경우, API 호출 전에 유효성 검사에서 걸러내어 불필요한 토큰 소모와 비용 발생을 차단했습니다.
 
-### [추가 참고 문서]
-* 전체 프로세스 및 상세 아키텍처 설계서: [docs/PROCESS_ARCHITECTURE.md](docs/PROCESS_ARCHITECTURE.md)Ran command: `python -c "
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-with open(r'..\codyssey-b2-02\src\game.py', 'r', encoding='utf-8') as f:
-    text = f.read()
-
-import re
-m = re.search(r'def parse_args.*?return parser\.parse_args\(\)', text, re.DOTALL)
-if m:
-    print(m.group(0))
-else:
-    print('parse_args not found, looking for main')
-    idx = text.find('if __name__ == \"__main__\":')
-    if idx != -1:
-        print(text[idx:idx+800])
-"`
-Used tool: manage_task
-Ran command: `python -c "
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-with open(r'..\codyssey-b2-02\src\game.py', 'r', encoding='utf-8') as f:
-    lines = f.readlines()
-print(''.join(lines[-40:]))
-"`
-Ran command: `Test-Path ..\codyssey-b2-02\game.py; Test-Path ..\codyssey-b2-02\src\game.py`
-Ran command: `python -c "
-import subprocess, sys
-res = subprocess.run([sys.executable, 'src/game.py'], cwd=r'..\codyssey-b2-02', capture_output=True, text=True, encoding='utf-8')
-print(res.stdout[:500])
-print('returncode:', res.returncode)
-"`
-Ran command: `python -c "
-content = '''\"\"\"
-한국 음식 128선 식사 추천 이상형 월드컵 메인 실행기 (Root Runner)
-\"\"\"
-from src.game import main
-
-if __name__ == \"__main__\":
-    main()
-'''
-with open(r'..\codyssey-b2-02\game.py', 'w', encoding='utf-8') as f:
-    f.write(content)
-print('Created root game.py')
-"`
-Ran command: `python -c "open(r'..\codyssey-b2-02\game.py', 'w', encoding='utf-8').write('from src.game import main\n\nif __name__ == \"__main__\":\n    main()\n')"`
-Ran command: `Set-Content -Path "..\codyssey-b2-02\game.py" -Value "from src.game import main`n`nif __name__ == '__main__':`n    main()"`
-Ran command: `python -c "
-import subprocess, sys
-res = subprocess.run([sys.executable, 'game.py', '--help'], cwd=r'..\codyssey-b2-02', capture_output=True, text=True, encoding='utf-8')
-print(res.stdout)
-"`
-Ran command: `git -C "..\codyssey-b2-02" add game.py; git -C "..\codyssey-b2-02" commit -m "feat: Add root game.py runner shortcut"; git -C "..\codyssey-b2-02" push origin main`
-Used tool: manage_task
-
-**한국 음식 128선 이상형 월드컵 게임**을 터미널에서 실행하는 방법입니다!
-
-터미널의 현재 위치가 `codyssey-b2-02` 폴더인지 확인하신 후, 아래 명령어 중 원하시는 모드로 실행해 보세요.
-
----
-
-### 🎮 1. 직접 골라가며 플레이하기 (대화형 모드 - 추천!)
-
-화면에 나오는 두 음식 중 마음에 드는 음식 번호(`1` 또는 `2`)를 키보드로 직접 누르며 최종 우승 음식을 뽑는 모드입니다.
-
-#### ① 기본 8강 혼자서 플레이 (1인용)
-```bash
-python game.py --interactive --players 안재현
-```
-
-#### ② 16강으로 풍성하게 플레이
-```bash
-python game.py --interactive --round 16 --players 안재현
-```
-
-#### ③ 팀원 3명(안재현, 강동하, 김진우)이 돌아가며 투표하기 (다인원 턴제)
-```bash
-python game.py --interactive --players 안재현 강동하 김진우
-```
-*(동점이 나오면 비자명 충돌 실습 때 만든 `tie_breaker.py`가 자동으로 제비뽑기를 진행합니다!)*
-
----
-
-### ⚡ 2. 1초 만에 결과 보기 (자동 시뮬레이션 모드)
-
-키보드 입력 없이 팀원 3명이 자동으로 투표하고 동점 추첨까지 거쳐 우승 음식을 바로 출력합니다.
-
-```bash
-python game.py
-```
-
----
-
-### 💡 실행 화면 예시
-
-```text
-=================================================================
-    [한국 음식 128선 식사 추천 이상형 월드컵]
-=================================================================
-* 토너먼트 규모: 8강
-* 참여 플레이어: 안재현 (총 1명)
------------------------------------------------------------------
-
-===== [ 8강전 ] =====
-[매치 1]
-  [1] 순두부찌개: 부드러운 순두부와 얼큰한 해물 국물
-  [2] 부대찌개: 햄과 소시지, 라면 사리가 가득한 푸짐함
-[안재현] 님의 선택 (1 또는 2 입력): 1
--> 승자: 순두부찌개 (다수결 투표)
-...
-=================================================================
-        *** 오늘의 최종 우승 추천 음식! ***
-=================================================================
-  * 이름: 순두부찌개
-  * 카테고리: 찌개/탕류
-  * 설명: 부드러운 순두부와 얼큰한 해물 국물
-=================================================================
-```
-
-터미널에 `python game.py --interactive --players 안재현`을 복사해서 붙여넣고 엔터를 쳐보세요! 점심/저녁 메뉴 추천으로 아주 재미있게 즐기실 수 있습니다. 😊
-* 전체 45개 단위 테스트 및 7대 수동 시나리오의 심층 분석 보고서: [TEST_RESULTS.md](TEST_RESULTS.md)
-* 단계별 테스트 계획 및 명령어 상세 가이드: [TEST_PLAN.md](TEST_PLAN.md)
-* 문제풀이 설계 및 모듈별 구현 계획서: [PLAN.md](PLAN.md)
-
-
-
+- 토큰 제한 및 노이즈 필터링: lock 파일(package-lock.json 등)이나 대용량 바이너리/빌드 산출물 등을 배제하고, 모델 컨텍스트 윈도우 한도 내의 유효 텍스트 크기 조건을 충족했기 때문에 API 호출 단계로 진입하도록 설계했습니다.
+# 프롬프트 구성 로직과 출력 포맷팅(질의 구획 포함) 로직을 어떻게 분리했고, 그 이유를 설명할 수 있는가?
+- 관심사 분리(SoC): 모델에 전달할 지시문/컨텍스트를 조립하는 역할과 LLM 응답을 파싱·가공(마크다운 섹션 추출, 터미널 ANSI 컬러 입히기 등)하는 역할을 독립시켰습니다.
+- 유지보수성: 프롬프트 변경이 출력 파싱 로직에 영향을 주지 않고, 반대로 CLI 출력 UI를 바꾸더라도 프롬프트를 건드릴 필요가 없도록 결합도를 낮
+# API 파라미터를 CLI 옵션으로 설계한 이유(유연성/실행 용이성)를 설명할 수 있는가?
+- 유연성: 소스 코드를 수정하지 않고도 작업 성격(간단한 픽스 vs 대규모 기능 추가)에 따라 모델 변경, 온도 조절, 토큰 수 조정을 유연하게 실행할 수 있습니다.
+- 스크립트/자동화 연계: Git hook(prepare-commit-msg), CI 파이프라인, 터미널 앨리어스(alias) 등에 유연한 인자 전달로 손쉽게 결합할 수 있습니다.
+# 오류 처리(API Key 누락, 네트워크 오류 등)를 어떤 방식으로 구현했고, 왜 그렇게 했는지 설명할 수 있는가?
+- 조기 종료(Fail-Fast): API Key 미설정 시 네트워크 호출 전에 즉시 에러 메시지와 함께 환경 변수 설정 가이드를 출력하고 종료하여 디버깅 편의를 제공했습니다.
+- 명시적 예외 처리: 네트워크 타임아웃, 모델 Rate Limit(429), API 서버 오류(5xx)에 대해 단순 크래시가 아닌 사용자 친화적인 메시지와 재시도 안내를 터미널 표준 에러(stderr)로 분리 출력했습니다.
+# AI API 호출 시 temperature 값을 높이거나 낮추면 결과가 어떻게 달라지는지 설명할 수 있는가?
+- 높은 값 (0.7 ~ 1.0): 다양한 어휘와 서술형 표현을 사용하여 풍부하고 독창적인 문장을 생성하지만, 정해진 커밋 컨벤션이나 포맷 규격을 벗어날 가능성이 커집니다.
+- 낮은 값 (0.0 ~ 0.2): 결정론적(deterministic)이고 정형화된 출력을 내며, 일관된 커밋 태그(feat:, fix:)와 간결한 문장을 안정적으로 유지합니다.
+# max_tokens 값이 결과물에 어떤 영향을 미치며, 어떤 기준으로 값을 설정했는지 설명할 수 있는가?
+- 영향: 최대 출력 길이를 제한하여 토큰 과다 소모를 막지만, 너무 작으면 PR 본문이나 불릿 포인트가 작성 도중 잘리는 현상이 발생합니다.
+- 설정 기준: 커밋 메시지(간결한 요약)는 대략 150~300 토큰, PR 본문(Why/What/How to Test 포함)은 1,000~1,500 토큰 내외로 설정하여 내용 잘림을 방지하면서도 불필요한 장문 생성을 억제했습니다.
+# 안정적인 품질에 맞는 결과를 얻기 위해 프롬프트에 어떤 정보를 포함했고, 왜 그렇게 구성했는지 설명할 수 있는가?
+- 역할 부여 및 규칙 명시: "시니어 소프트웨어 엔지니어" 페르소나를 부여하고, Conventional Commits 규칙 및 필수 구획(Why, What, How to Test)을 명시했습니다.
+- Few-shot 및 제약 조건: 좋은 커밋/PR 예시를 제공하고, "코드 자체를 복사하지 말고 변경 의도를 요약하라"는 부정 지시어를 포함해 환각과 사족을 방지했습니다.
+# 평가/평가 규격을 "매개변수"로 취급할지 "파라미터"로 취급할지 선택했다면, 그 선택 이유를 설명할 수 있는가?
+- 유연성: 소스 코드를 수정하지 않고도 작업 성격(간단한 픽스 vs 대규모 기능 추가)에 따라 모델 변경, 온도 조절, 토큰 수 조정을 유연하게 실행할 수 있습니다.
+- 스크립트/자동화 연계: Git hook(prepare-commit-msg), CI 파이프라인, 터미널 앨리어스(alias) 등에 유연한 인자 전달로 손쉽게 결합할 수 있습니다.
+- 맥스 토큰이나 템프리처처럼 상황에 따라 바껴야할 값을 파라미터, 그리고 커밋 글자수처럼 표준화할것은 매개변수로 부름
+# AI가 생성한 커밋/PR 텍스트를 바로 사용하지 않고 검토가 필요한 이유를 설명할 수 있는가?
+# 실시간에 민감하지 않은(API Key, 개인정보 등)이 포함될 수 있는 상황과 이를 방지하기 위한 방안을 설명할 수 있는가?
+- 방지 방안: .gitignore 검증, diff 수집 단계에서 정규식 기반 시크릿 탐지(Secret Scanner) 필터링 적용, 특정 확장자(*.pem, *.key, .env*) 제외 로직을 필수로 구성합니다.
+# 이 도구를 실제 팀 프로젝트에 적용한다면 어떤 기능을 가장 먼저 추가하거나 개선하고 싶은지, 그 우선순위 근거를 설명할 수 있는가?
+- 도구 도입의 가장 큰 장벽은 '사용 습관'과 '잘못된 메시지 자동 반영'에 대한 불안감입니다. git commit 시 자동으로 훅이 실행되고, 터미널에서 제안된 메시지를 즉시 [승인/재생성/직접 편집]할 수 있는 대화형 인터페이스를 갖추어야 팀원들의 워크플로우에 마찰 없이 안착할 수 있습니다.
